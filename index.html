@@ -115,7 +115,7 @@
         </div>
     </div>
 
-    <script>
+   <script>
         const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
         const progressContainer = document.getElementById('progress-container'); const progressFill = document.getElementById('progress-fill');
         const scoreCounter = document.getElementById('score-counter'); const wrapper = document.getElementById('game-container-box');
@@ -136,11 +136,11 @@
         window.addEventListener('resize', resize); resize();
 
         // --- GAME CONFIG ---
-        const KEY_ID = "firewall_v1"; // NEW GAME, NEW LEADERBOARD ID
+        const KEY_ID = "firewall_v1"; 
         let TARGET_SCORE = 50; 
         let PERF_MODE = false;
 
-        let highScore = localStorage.getItem('powa-firewall-best') || 0; // Separate storage for Firewall
+        let highScore = localStorage.getItem('powa-firewall-best') || 0; 
         let storedKeyId = localStorage.getItem('powa-key-id');
         let storedUnlock = localStorage.getItem('powa-unlocked');
         let isUnlocked = false;
@@ -157,7 +157,6 @@
         let currentBiome = 0; let infiniteMode = false;
         const AudioContext = window.AudioContext || window.webkitAudioContext; let audioCtx = new AudioContext();
 
-        // --- ENCRYPTION ---
         const _encData = [0,31,45,89,90,1,31,86,95,92,85,93,86,23,37,64,71,70,75,8,12,1,29,82,94,80,94,93,15,65,116,23,17,17,17]; 
         const _salt = "string.elementAt";
         window.addEventListener('sys-buffer-ready', () => {
@@ -178,10 +177,8 @@
         };
         const MUSIC = { play: () => BGM.play().catch(e=>{}), stop: () => { BGM.pause(); BGM.currentTime=0; }, pause: () => BGM.pause(), resume: () => BGM.play() };
 
-        // --- STATE ---
-        let frames = 0; let score = 0; let enemySpawnTimer = 0; let gameState = 'START'; let globalHue = 0; let startTime=0;
-        let particles = []; let shockwaves = []; let floatTexts = []; let bullets = []; let enemies = []; let items = [];
-        let stars = []; let nebulae = [];
+        let frames = 0; let score = 0; let gameState = 'START'; let globalHue = 0; let startTime=0;
+        let particles = []; let bullets = []; let enemies = []; let items = []; let stars = []; let nebulae = [];
         const TIME_STEP = 1000 / 60; let lastTime = 0; let accumulator = 0;
 
         async function copyKey(id, btn) { try { await navigator.clipboard.writeText(document.getElementById(id).innerText); btn.innerText="COPIED!"; setTimeout(()=>{ btn.innerText="COPY KEY"; },2000); } catch(e){} }
@@ -200,19 +197,11 @@
             ctx.fillStyle=b.star; stars.forEach(s => { ctx.globalAlpha=s.alpha; ctx.fillRect(s.x,s.y,s.size,s.size); }); ctx.globalAlpha=1;
         }
 
-        // --- PLAYER ---
         const player = {
             x: width/2, y: height - 100, w: 40, h: 40, hasShield: false,
-            update: function() {
-                // AUTO FIRE
-                if (frames % 10 === 0 && gameState === 'PLAY') {
-                    bullets.push({x: this.x, y: this.y - 20, w: 4, h: 12, speed: 12});
-                    SFX.shoot();
-                }
-            },
+            update: function() { if (frames % 10 === 0 && gameState === 'PLAY') { bullets.push({x: this.x, y: this.y - 20, w: 4, h: 12, speed: 12}); SFX.shoot(); } },
             draw: function() {
-                ctx.save(); ctx.translate(this.x, this.y);
-                ctx.fillStyle = "#fff";
+                ctx.save(); ctx.translate(this.x, this.y); ctx.fillStyle = "#fff";
                 ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(15, 20); ctx.lineTo(0, 15); ctx.lineTo(-15, 20); ctx.closePath(); ctx.fill();
                 if(!PERF_MODE) { ctx.shadowBlur=15; ctx.shadowColor="#00ffff"; ctx.strokeStyle="#00ffff"; ctx.stroke(); }
                 if(this.hasShield) { ctx.beginPath(); ctx.strokeStyle=`hsla(180, 100%, 50%, ${Math.abs(Math.sin(frames*0.1))+0.5})`; ctx.arc(0,0,30,0,Math.PI*2); ctx.stroke(); }
@@ -220,110 +209,54 @@
             }
         };
 
-        // --- LOGIC ---
         function updatePhysics() {
             if(gameState !== 'PLAY') return;
             frames++; updateGalaxy(); globalHue = (globalHue+1)%360;
-
-            // Spawn Enemies
-            let spawnRate = Math.max(20, 60 - Math.floor(score/2)); // Get harder
-            if (frames % spawnRate === 0) {
-                let size = 30 + Math.random()*20;
-                enemies.push({ x: Math.random()*(width-size), y: -50, w: size, h: size, speed: 3 + Math.random() + (score/20), hp: 1 + Math.floor(score/30), type: Math.random()>0.8?'tank':'normal' });
-            }
-            // Spawn Shield (Rare)
+            let spawnRate = Math.max(20, 60 - Math.floor(score/2));
+            if (frames % spawnRate === 0) { let size = 30 + Math.random()*20; enemies.push({ x: Math.random()*(width-size), y: -50, w: size, h: size, speed: 3 + Math.random() + (score/20), hp: 1 + Math.floor(score/30), type: Math.random()>0.8?'tank':'normal' }); }
             if (frames % 800 === 0 && !player.hasShield) { items.push({x: Math.random()*(width-40), y: -50, type: 'SHIELD'}); }
-
-            // Update Bullets
-            bullets = bullets.filter(b => {
-                b.y -= b.speed;
-                return b.y > -20;
-            });
-
-            // Update Enemies & Collision
+            bullets = bullets.filter(b => { b.y -= b.speed; return b.y > -20; });
             enemies = enemies.filter(e => {
                 e.y += e.speed;
-                // Hit Player?
-                if (Math.abs(e.x - player.x + e.w/2) < (e.w/2 + 10) && Math.abs(e.y - player.y) < 30) {
-                    if (player.hasShield) { player.hasShield = false; SFX.shieldBreak(); return false; } // Shield saves you
-                    else { die(); return false; }
-                }
-                // Hit by Bullet?
-                for (let i = 0; i < bullets.length; i++) {
-                    let b = bullets[i];
-                    if (b.x > e.x && b.x < e.x + e.w && b.y < e.y + e.h && b.y > e.y) {
-                        e.hp--; bullets.splice(i, 1); SFX.hit();
-                        if (e.hp <= 0) {
-                            score++; SFX.score();
-                            if(infiniteMode) scoreCounter.innerText = score; else updateProgress();
-                            if(!infiniteMode && score >= TARGET_SCORE) winGame();
-                            switchBiome();
-                            if(!PERF_MODE) for(let k=0; k<8; k++) particles.push({x:e.x+e.w/2, y:e.y+e.h/2, vx:(Math.random()-0.5)*10, vy:(Math.random()-0.5)*10, life:1.0, color:'#ff0055'});
-                            return false; 
-                        }
-                        break;
-                    }
-                }
+                if (Math.abs(e.x - player.x + e.w/2) < (e.w/2 + 10) && Math.abs(e.y - player.y) < 30) { if (player.hasShield) { player.hasShield = false; SFX.shieldBreak(); return false; } else { die(); return false; } }
+                for (let i = 0; i < bullets.length; i++) { let b = bullets[i]; if (b.x > e.x && b.x < e.x + e.w && b.y < e.y + e.h && b.y > e.y) { e.hp--; bullets.splice(i, 1); SFX.hit(); if (e.hp <= 0) { score++; SFX.score(); if(infiniteMode) scoreCounter.innerText = score; else updateProgress(); if(!infiniteMode && score >= TARGET_SCORE) winGame(); switchBiome(); if(!PERF_MODE) for(let k=0; k<8; k++) particles.push({x:e.x+e.w/2, y:e.y+e.h/2, vx:(Math.random()-0.5)*10, vy:(Math.random()-0.5)*10, life:1.0, color:'#ff0055'}); return false; } break; } }
                 return e.y < height;
             });
-
-            // Update Items
-            items = items.filter(i => {
-                i.y += 4;
-                if (Math.abs(i.x - player.x) < 30 && Math.abs(i.y - player.y) < 30) {
-                    player.hasShield = true; SFX.shieldUp(); return false;
-                }
-                return i.y < height;
-            });
-
-            // Particles
+            items = items.filter(i => { i.y += 4; if (Math.abs(i.x - player.x) < 30 && Math.abs(i.y - player.y) < 30) { player.hasShield = true; SFX.shieldUp(); return false; } return i.y < height; });
             particles = particles.filter(p => { p.x+=p.vx; p.y+=p.vy; p.life-=0.05; return p.life>0; });
-
             player.update();
         }
 
         function drawGame() {
             drawGalaxy();
             ctx.fillStyle = "#00ffff"; bullets.forEach(b => ctx.fillRect(b.x-2, b.y, b.w, b.h));
-            
-            enemies.forEach(e => {
-                ctx.fillStyle = (e.type === 'tank') ? "#ffaa00" : "#ff0055";
-                if(PERF_MODE) { ctx.fillRect(e.x, e.y, e.w, e.h); } 
-                else {
-                    ctx.save(); ctx.translate(e.x + e.w/2, e.y + e.h/2);
-                    ctx.rotate(frames * 0.1);
-                    ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
-                    ctx.fillRect(-e.w/2, -e.h/2, e.w, e.h);
-                    ctx.restore();
-                }
-            });
-
-            items.forEach(i => {
-                ctx.fillStyle = "#00ffaa"; ctx.beginPath(); ctx.arc(i.x, i.y, 15, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = "#000"; ctx.fillText("S", i.x-4, i.y+5);
-            });
-
+            enemies.forEach(e => { ctx.fillStyle = (e.type === 'tank') ? "#ffaa00" : "#ff0055"; if(PERF_MODE) { ctx.fillRect(e.x, e.y, e.w, e.h); } else { ctx.save(); ctx.translate(e.x + e.w/2, e.y + e.h/2); ctx.rotate(frames * 0.1); ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle; ctx.fillRect(-e.w/2, -e.h/2, e.w, e.h); ctx.restore(); } });
+            items.forEach(i => { ctx.fillStyle = "#00ffaa"; ctx.beginPath(); ctx.arc(i.x, i.y, 15, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = "#000"; ctx.fillText("S", i.x-4, i.y+5); });
             particles.forEach(p => { ctx.fillStyle=p.color; ctx.globalAlpha=p.life; ctx.fillRect(p.x,p.y,3,3); }); ctx.globalAlpha=1;
             if(gameState !== 'START') player.draw();
         }
 
-        function loop(ts) {
-            if(!lastTime) lastTime=ts; let dt=ts-lastTime; lastTime=ts; if(dt>1000)dt=1000; accumulator+=dt;
-            while(accumulator>=TIME_STEP){ updatePhysics(); accumulator-=TIME_STEP; }
-            drawGame(); requestAnimationFrame(loop);
-        }
+        function loop(ts) { if(!lastTime) lastTime=ts; let dt=ts-lastTime; lastTime=ts; if(dt>1000)dt=1000; accumulator+=dt; while(accumulator>=TIME_STEP){ updatePhysics(); accumulator-=TIME_STEP; } drawGame(); requestAnimationFrame(loop); }
 
-        // --- INPUT ---
+        // --- FIXED INPUT HANDLER ---
         function movePlayer(clientX) {
-            let rect = canvas.getBoundingClientRect();
-            let scaleX = canvas.width / rect.width;
+            let rect = canvas.getBoundingClientRect(); let scaleX = canvas.width / rect.width;
             player.x = (clientX - rect.left) * scaleX;
             if (player.x < 20) player.x = 20; if (player.x > width - 20) player.x = width - 20;
         }
+        function handleGlobalInput(e) {
+            // 1. If clicking specific UI buttons, DO NOT start game
+            if(e.target.id === 'perf-btn' || e.target.closest('#leaderboard') || e.target.classList.contains('tab-btn')) return;
+            // 2. Start game if in START mode
+            if(gameState === 'START') startGame();
+        }
+        
         window.addEventListener('mousemove', e => { if(gameState==='PLAY') movePlayer(e.clientX); });
         window.addEventListener('touchmove', e => { if(gameState==='PLAY') movePlayer(e.touches[0].clientX); }, {passive: false});
-        canvas.addEventListener('mousedown', () => { if(gameState==='START') startGame(); });
-        canvas.addEventListener('touchstart', () => { if(gameState==='START') startGame(); }, {passive: false});
+        
+        // Listen on WINDOW, not CANVAS, to catch clicks even on top of UI
+        window.addEventListener('mousedown', handleGlobalInput);
+        window.addEventListener('touchstart', handleGlobalInput, {passive: false});
 
         function startGame() { gameState = 'PLAY'; document.getElementById('main-menu').style.display='none'; MUSIC.play(); frames=0; score=0; startTime=Date.now(); if(infiniteMode) scoreCounter.style.display='block'; }
         
@@ -332,16 +265,13 @@
             deathScoreDisplay.innerText = `SCORE: ${score}`; deathBestDisplay.innerText = `BEST: ${highScore}`;
             gameState='DIE'; SFX.explode(); MUSIC.stop();
             bgFail.style.display='block'; setTimeout(()=>bgFail.style.opacity='1',10); setTimeout(()=>deathModal.style.display='flex',800);
-            
-            // Auto Submit
             const savedName = localStorage.getItem('powa-username');
             if(savedName) { document.getElementById('username-input').value = savedName; submitScore(true); }
             else { document.getElementById('username-input').disabled=false; document.getElementById('submit-score-btn').disabled=false; document.getElementById('submit-score-btn').innerText="SUBMIT SCORE"; }
         }
 
         function winGame() {
-            gameState='WIN'; SFX.win(); MUSIC.pause();
-            localStorage.setItem('powa-unlocked', 'true'); isUnlocked=true;
+            gameState='WIN'; SFX.win(); MUSIC.pause(); localStorage.setItem('powa-unlocked', 'true'); isUnlocked=true;
             window.dispatchEvent(new Event('sys-buffer-ready'));
             bgWin.style.display='block'; setTimeout(()=>bgWin.style.opacity='1',10); winModal.style.display='flex';
         }
@@ -362,21 +292,18 @@
             let t = setInterval(()=>{ count--; if(count>0) ce.innerText=count; else { clearInterval(t); ce.style.display='none'; gameState='PLAY'; MUSIC.resume(); } }, 1000);
         };
 
-        // --- FIREBASE (SAME LOGIC, NEW KEY) ---
         const firebaseConfig = { apiKey: "AIzaSyCTnLXpYRMw8pxaBS1cIqeeGqtD7A1Mtow", authDomain: "powa-2f1bc.firebaseapp.com", projectId: "powa-2f1bc", storageBucket: "powa-2f1bc.firebasestorage.app", messagingSenderId: "522344119710", appId: "1:522344119710:web:3bd572ef6580abd4c76a8f" };
         if(!firebase.apps.length) firebase.initializeApp(firebaseConfig); const db = firebase.firestore();
-        
         let currentLeaderboardListener = null;
         window.switchTab = function(mode) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-btn')[mode==='daily'?0:1].classList.add('active');
             fetchLeaderboard(mode);
         };
-
         function fetchLeaderboard(mode) {
             const listDiv = document.getElementById('leaderboard-list'); listDiv.innerHTML = "<div style='text-align:center; color:#ff0055; padding-top:20px; animation:blink 1s infinite;'>LOADING...</div>";
             if(currentLeaderboardListener) currentLeaderboardListener();
-            const collectionName = (mode === 'daily') ? `leaderboard_${KEY_ID}` : "leaderboard_firewall_alltime"; // Separate all-time for firewall
+            const collectionName = (mode === 'daily') ? `leaderboard_${KEY_ID}` : "leaderboard_firewall_alltime";
             currentLeaderboardListener = db.collection(collectionName).orderBy("score", "desc").limit(10).onSnapshot((snap) => {
                 let html = ""; let rank = 1;
                 snap.forEach((doc) => {
@@ -386,14 +313,12 @@
                 listDiv.innerHTML = html || "<div style='text-align:center; color:#555;'>[ NO SCORES ]</div>";
             });
         }
-
         function submitToCollection(col, name, score) {
             return db.collection(col).where("name", "==", name).get().then(snap => {
                 if(!snap.empty) { if(score > snap.docs[0].data().score) return db.collection(col).doc(snap.docs[0].id).update({score, date:new Date()}); }
                 else return db.collection(col).add({name, score, date:new Date()});
             });
         }
-
         window.submitScore = function(isAuto=false) {
             const nameIn = document.getElementById('username-input'); const btn = document.getElementById('submit-score-btn');
             let name = nameIn.value.toUpperCase().substring(0,15).trim() || "ANONYMOUS";
