@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>POWA-PROXY: FIREWALL</title>
+    <title>POWA-PROXY: FIREWALL V2</title>
     <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -17,7 +17,7 @@
         .glitch-anim { animation: glitch-skew 1s infinite linear alternate-reverse; }
         @keyframes shake-s { 0% { transform: translate(0,0); } 50% { transform: translate(0, 4px); } 100% { transform: translate(0,0); } }
         @keyframes glitch-skew { 0% { transform: skew(0deg); } 20% { transform: skew(-2deg); } 40% { transform: skew(2deg); } 60% { transform: skew(0deg); } 80% { transform: skew(-1deg); } 100% { transform: skew(1deg); } }
-        canvas { display: block; width: 100%; height: 100%; touch-action: none; } /* Stop mobile scrolling */
+        canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; z-index: 10; }
         #top-bar { display: flex; align-items: center; padding: 20px; width: 100%; box-sizing: border-box; justify-content: center; }
@@ -30,7 +30,6 @@
         h1 { color: #fff; font-size: 3.5rem; margin: 0; line-height: 0.95; text-shadow: 4px 4px 0px #000, 0 0 40px #ff0055; -webkit-text-stroke: 2px #000; transform: skew(-5deg); letter-spacing: -2px; }
         .high-score-label { color: #ffcc00; font-size: 1.2rem; margin-top: 10px; text-shadow: 0 0 10px #ffcc00; letter-spacing: 1px; }
 
-        /* LEADERBOARD & TABS */
         #leaderboard { margin: 15px auto; width: 320px; height: 210px; background: rgba(10, 0, 5, 0.9); border: 2px solid #ff0055; box-shadow: 0 0 15px rgba(255, 0, 85, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.8); border-radius: 6px; padding: 10px; overflow: hidden; display: flex; flex-direction: column; pointer-events: auto; text-align: left; box-sizing: border-box; font-family: 'Russo One', sans-serif; }
         #tab-container { display: flex; justify-content: center; margin-bottom: 8px; gap: 5px; }
         .tab-btn { background: transparent; border: 1px solid #550022; color: #880044; padding: 5px 10px; font-family: 'Russo One'; font-size: 0.8rem; cursor: pointer; flex-grow: 1; text-transform: uppercase; }
@@ -115,7 +114,7 @@
         </div>
     </div>
 
-   <script>
+    <script>
         const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
         const progressContainer = document.getElementById('progress-container'); const progressFill = document.getElementById('progress-fill');
         const scoreCounter = document.getElementById('score-counter'); const wrapper = document.getElementById('game-container-box');
@@ -136,7 +135,7 @@
         window.addEventListener('resize', resize); resize();
 
         // --- GAME CONFIG ---
-        const KEY_ID = "firewall_v1"; 
+        const KEY_ID = "firewall_v2"; 
         let TARGET_SCORE = 50; 
         let PERF_MODE = false;
 
@@ -199,12 +198,17 @@
 
         const player = {
             x: width/2, y: height - 100, w: 40, h: 40, hasShield: false,
-            update: function() { if (frames % 10 === 0 && gameState === 'PLAY') { bullets.push({x: this.x, y: this.y - 20, w: 4, h: 12, speed: 12}); SFX.shoot(); } },
+            update: function() { if (frames % 8 === 0 && gameState === 'PLAY') { bullets.push({x: this.x, y: this.y - 20, w: 4, h: 12, speed: 14}); SFX.shoot(); } },
             draw: function() {
-                ctx.save(); ctx.translate(this.x, this.y); ctx.fillStyle = "#fff";
-                ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(15, 20); ctx.lineTo(0, 15); ctx.lineTo(-15, 20); ctx.closePath(); ctx.fill();
-                if(!PERF_MODE) { ctx.shadowBlur=15; ctx.shadowColor="#00ffff"; ctx.strokeStyle="#00ffff"; ctx.stroke(); }
-                if(this.hasShield) { ctx.beginPath(); ctx.strokeStyle=`hsla(180, 100%, 50%, ${Math.abs(Math.sin(frames*0.1))+0.5})`; ctx.arc(0,0,30,0,Math.PI*2); ctx.stroke(); }
+                ctx.save(); ctx.translate(this.x, this.y);
+                // ENGINE FLAME
+                ctx.fillStyle = `rgba(0, 255, 255, ${Math.random()*0.5 + 0.5})`;
+                ctx.beginPath(); ctx.moveTo(-5, 20); ctx.lineTo(0, 35 + Math.random()*10); ctx.lineTo(5, 20); ctx.fill();
+                // SHIP BODY
+                ctx.fillStyle = "#fff";
+                ctx.beginPath(); ctx.moveTo(0, -25); ctx.lineTo(20, 20); ctx.lineTo(0, 10); ctx.lineTo(-20, 20); ctx.closePath(); ctx.fill();
+                if(!PERF_MODE) { ctx.shadowBlur=20; ctx.shadowColor="#00ffff"; ctx.strokeStyle="#00ffff"; ctx.lineWidth=2; ctx.stroke(); }
+                if(this.hasShield) { ctx.beginPath(); ctx.strokeStyle=`hsla(180, 100%, 50%, ${Math.abs(Math.sin(frames*0.1))+0.5})`; ctx.arc(0,0,35,0,Math.PI*2); ctx.stroke(); }
                 ctx.restore();
             }
         };
@@ -212,16 +216,50 @@
         function updatePhysics() {
             if(gameState !== 'PLAY') return;
             frames++; updateGalaxy(); globalHue = (globalHue+1)%360;
-            let spawnRate = Math.max(20, 60 - Math.floor(score/2));
-            if (frames % spawnRate === 0) { let size = 30 + Math.random()*20; enemies.push({ x: Math.random()*(width-size), y: -50, w: size, h: size, speed: 3 + Math.random() + (score/20), hp: 1 + Math.floor(score/30), type: Math.random()>0.8?'tank':'normal' }); }
+            
+            // SPAWN RATE - HARDER
+            let difficulty = Math.min(40, Math.floor(score/3));
+            let spawnRate = Math.max(15, 50 - difficulty); 
+            
+            if (frames % spawnRate === 0) { 
+                let type = Math.random() > 0.7 ? 'tank' : 'virus';
+                let size = type === 'tank' ? 50 : 35;
+                let hp = type === 'tank' ? 3 + Math.floor(score/25) : 1;
+                let speed = 4 + Math.random() * 2 + (score/20); // Faster Base Speed
+                let wave = type === 'virus' ? (Math.random() > 0.5 ? 1 : -1) : 0; // Only viruses wave
+                
+                enemies.push({ x: Math.random()*(width-size), y: -60, w: size, h: size, speed: speed, hp: hp, type: type, wave: wave, startX: 0 });
+                // Set startX after push
+                enemies[enemies.length-1].startX = enemies[enemies.length-1].x;
+            }
+            
             if (frames % 800 === 0 && !player.hasShield) { items.push({x: Math.random()*(width-40), y: -50, type: 'SHIELD'}); }
+            
             bullets = bullets.filter(b => { b.y -= b.speed; return b.y > -20; });
+            
             enemies = enemies.filter(e => {
                 e.y += e.speed;
-                if (Math.abs(e.x - player.x + e.w/2) < (e.w/2 + 10) && Math.abs(e.y - player.y) < 30) { if (player.hasShield) { player.hasShield = false; SFX.shieldBreak(); return false; } else { die(); return false; } }
-                for (let i = 0; i < bullets.length; i++) { let b = bullets[i]; if (b.x > e.x && b.x < e.x + e.w && b.y < e.y + e.h && b.y > e.y) { e.hp--; bullets.splice(i, 1); SFX.hit(); if (e.hp <= 0) { score++; SFX.score(); if(infiniteMode) scoreCounter.innerText = score; else updateProgress(); if(!infiniteMode && score >= TARGET_SCORE) winGame(); switchBiome(); if(!PERF_MODE) for(let k=0; k<8; k++) particles.push({x:e.x+e.w/2, y:e.y+e.h/2, vx:(Math.random()-0.5)*10, vy:(Math.random()-0.5)*10, life:1.0, color:'#ff0055'}); return false; } break; } }
+                // WAVY MOVEMENT
+                if(e.wave !== 0) { e.x = e.startX + Math.sin(frames * 0.05) * 40 * e.wave; }
+
+                if (Math.abs(e.x - player.x) < (e.w/2 + 10) && Math.abs(e.y - player.y) < 30) { if (player.hasShield) { player.hasShield = false; SFX.shieldBreak(); return false; } else { die(); return false; } }
+                
+                for (let i = 0; i < bullets.length; i++) { 
+                    let b = bullets[i]; 
+                    // Hitbox check
+                    if (b.x > e.x - e.w/2 && b.x < e.x + e.w/2 && b.y < e.y + e.h/2 && b.y > e.y - e.h/2) { 
+                        e.hp--; bullets.splice(i, 1); SFX.hit(); 
+                        if (e.hp <= 0) { 
+                            score++; SFX.score(); if(infiniteMode) scoreCounter.innerText = score; else updateProgress(); if(!infiniteMode && score >= TARGET_SCORE) winGame(); switchBiome(); 
+                            if(!PERF_MODE) for(let k=0; k<8; k++) particles.push({x:e.x, y:e.y, vx:(Math.random()-0.5)*10, vy:(Math.random()-0.5)*10, life:1.0, color:'#ff0055'}); 
+                            return false; 
+                        } 
+                        break; 
+                    } 
+                }
                 return e.y < height;
             });
+            
             items = items.filter(i => { i.y += 4; if (Math.abs(i.x - player.x) < 30 && Math.abs(i.y - player.y) < 30) { player.hasShield = true; SFX.shieldUp(); return false; } return i.y < height; });
             particles = particles.filter(p => { p.x+=p.vx; p.y+=p.vy; p.life-=0.05; return p.life>0; });
             player.update();
@@ -229,32 +267,72 @@
 
         function drawGame() {
             drawGalaxy();
-            ctx.fillStyle = "#00ffff"; bullets.forEach(b => ctx.fillRect(b.x-2, b.y, b.w, b.h));
-            enemies.forEach(e => { ctx.fillStyle = (e.type === 'tank') ? "#ffaa00" : "#ff0055"; if(PERF_MODE) { ctx.fillRect(e.x, e.y, e.w, e.h); } else { ctx.save(); ctx.translate(e.x + e.w/2, e.y + e.h/2); ctx.rotate(frames * 0.1); ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle; ctx.fillRect(-e.w/2, -e.h/2, e.w, e.h); ctx.restore(); } });
-            items.forEach(i => { ctx.fillStyle = "#00ffaa"; ctx.beginPath(); ctx.arc(i.x, i.y, 15, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = "#000"; ctx.fillText("S", i.x-4, i.y+5); });
+            ctx.shadowBlur = 10; ctx.shadowColor = "#00ffff"; ctx.fillStyle = "#00ffff"; 
+            bullets.forEach(b => ctx.fillRect(b.x-2, b.y, b.w, b.h));
+            ctx.shadowBlur = 0;
+
+            enemies.forEach(e => {
+                ctx.save(); ctx.translate(e.x, e.y); // Centered coordinates now
+                if (e.type === 'tank') {
+                    // TANK DESIGN (Hexagon)
+                    ctx.rotate(frames * 0.02);
+                    ctx.fillStyle = "#ffaa00";
+                    ctx.shadowBlur = PERF_MODE ? 0 : 15; ctx.shadowColor = "#ffaa00";
+                    ctx.beginPath();
+                    for (let i = 0; i < 6; i++) {
+                        ctx.lineTo(e.w/2 * Math.cos(i * Math.PI / 3), e.w/2 * Math.sin(i * Math.PI / 3));
+                    }
+                    ctx.closePath(); ctx.fill();
+                    // Core
+                    ctx.fillStyle = "#fff"; ctx.fillRect(-5, -5, 10, 10);
+                } else {
+                    // VIRUS DESIGN (Spiky Circle)
+                    let pulse = Math.sin(frames * 0.2) * 5;
+                    ctx.fillStyle = "#ff0055";
+                    ctx.shadowBlur = PERF_MODE ? 0 : 10; ctx.shadowColor = "#ff0055";
+                    ctx.beginPath();
+                    ctx.arc(0, 0, e.w/2 - 2, 0, Math.PI*2);
+                    ctx.fill();
+                    // Spikes
+                    ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    for(let i=0; i<8; i++) {
+                        let angle = (frames*0.1) + (i * Math.PI / 4);
+                        ctx.moveTo(Math.cos(angle)*(e.w/2-5), Math.sin(angle)*(e.w/2-5));
+                        ctx.lineTo(Math.cos(angle)*(e.w/2+5), Math.sin(angle)*(e.w/2+5));
+                    }
+                    ctx.stroke();
+                }
+                ctx.restore();
+            });
+
+            items.forEach(i => {
+                ctx.save(); ctx.translate(i.x, i.y);
+                ctx.fillStyle = "#00ffaa"; ctx.shadowBlur = 10; ctx.shadowColor = "#00ffaa";
+                ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#000"; ctx.font = "16px monospace"; ctx.textAlign="center"; ctx.textBaseline="middle";
+                ctx.fillText("S", 0, 1);
+                ctx.restore();
+            });
+
             particles.forEach(p => { ctx.fillStyle=p.color; ctx.globalAlpha=p.life; ctx.fillRect(p.x,p.y,3,3); }); ctx.globalAlpha=1;
             if(gameState !== 'START') player.draw();
         }
 
         function loop(ts) { if(!lastTime) lastTime=ts; let dt=ts-lastTime; lastTime=ts; if(dt>1000)dt=1000; accumulator+=dt; while(accumulator>=TIME_STEP){ updatePhysics(); accumulator-=TIME_STEP; } drawGame(); requestAnimationFrame(loop); }
 
-        // --- FIXED INPUT HANDLER ---
         function movePlayer(clientX) {
             let rect = canvas.getBoundingClientRect(); let scaleX = canvas.width / rect.width;
             player.x = (clientX - rect.left) * scaleX;
             if (player.x < 20) player.x = 20; if (player.x > width - 20) player.x = width - 20;
         }
         function handleGlobalInput(e) {
-            // 1. If clicking specific UI buttons, DO NOT start game
             if(e.target.id === 'perf-btn' || e.target.closest('#leaderboard') || e.target.classList.contains('tab-btn')) return;
-            // 2. Start game if in START mode
             if(gameState === 'START') startGame();
         }
         
         window.addEventListener('mousemove', e => { if(gameState==='PLAY') movePlayer(e.clientX); });
         window.addEventListener('touchmove', e => { if(gameState==='PLAY') movePlayer(e.touches[0].clientX); }, {passive: false});
-        
-        // Listen on WINDOW, not CANVAS, to catch clicks even on top of UI
         window.addEventListener('mousedown', handleGlobalInput);
         window.addEventListener('touchstart', handleGlobalInput, {passive: false});
 
