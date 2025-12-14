@@ -3,365 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>POWA-GACHA: PROTOCOL</title>
-    <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
-    
+    <title>POWA-PROTOCOL: CARD BATTLE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-
     <style>
-        body { margin: 0; background-color: #050510; font-family: 'Russo One', sans-serif; overflow: hidden; width: 100vw; height: 100vh; color: #fff; user-select: none; -webkit-user-select: none; }
-        
-        /* LAYOUT */
-        #app { width: 100%; max-width: 500px; height: 100%; margin: 0 auto; display: flex; flex-direction: column; position: relative; background: radial-gradient(circle at top, #1a0b2e, #000); box-shadow: 0 0 50px rgba(0,0,0,0.5); border-left: 1px solid #333; border-right: 1px solid #333; }
+        body { margin: 0; background-color: #050510; font-family: 'Russo One', sans-serif; overflow: hidden; width: 100vw; height: 100vh; user-select: none; -webkit-user-select: none; }
+        #app { width: 100%; height: 100%; display: flex; flex-direction: column; background: radial-gradient(circle at center, #1a0b2e 0%, #000 100%); position: relative; }
         
         /* HEADER */
-        header { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.8); border-bottom: 2px solid #bd00ff; z-index: 10; }
-        .currency-box { display: flex; align-items: center; gap: 10px; font-family: 'Roboto Mono', monospace; color: #00ffff; font-size: 1.2rem; text-shadow: 0 0 10px #00ffff; }
-        .cp-box { font-size: 0.9rem; color: #ff0055; }
+        header { padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.8); border-bottom: 2px solid #bd00ff; z-index: 10; color: #fff; }
+        .status { font-size: 0.9rem; color: #00ffff; }
 
-        /* MAIN AREA */
-        #main-stage { flex-grow: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        /* GAME AREA */
+        #game-board { flex-grow: 1; position: relative; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; overflow: hidden; }
         
-        /* MINING BUTTON */
-        #mine-btn {
-            width: 200px; height: 200px; border-radius: 50%;
-            background: radial-gradient(circle, #2a2a40, #000);
-            border: 4px solid #bd00ff;
-            box-shadow: 0 0 30px rgba(189, 0, 255, 0.3), inset 0 0 20px rgba(189, 0, 255, 0.2);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.5rem; color: #bd00ff; cursor: pointer;
-            transition: all 0.1s; position: relative; overflow: hidden;
-            text-shadow: 0 0 10px #bd00ff;
-        }
-        #mine-btn:active { transform: scale(0.95); border-color: #fff; color: #fff; box-shadow: 0 0 50px #bd00ff; }
-        .ripple { position: absolute; border-radius: 50%; transform: scale(0); animation: ripple 0.6s linear; background: rgba(255, 255, 255, 0.3); pointer-events: none; }
-        @keyframes ripple { to { transform: scale(4); opacity: 0; } }
+        /* OPPONENT HAND */
+        #cpu-hand { display: flex; justify-content: center; gap: -10px; height: 80px; transform: scale(0.8); opacity: 0.8; }
+        .card-back { width: 60px; height: 90px; background: repeating-linear-gradient(45deg, #111, #111 10px, #222 10px, #222 20px); border: 2px solid #555; border-radius: 8px; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); }
 
-        /* SUMMON SCREEN */
-        #summon-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        .card-reveal { 
-            width: 240px; height: 360px; background: #111; border-radius: 12px; 
-            perspective: 1000px; cursor: pointer; position: relative;
-            box-shadow: 0 0 40px rgba(0,0,0,0.5);
-        }
-        .card-inner { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.6s; transform-style: preserve-3d; }
-        .card-reveal.flipped .card-inner { transform: rotateY(180deg); }
-        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid #333; }
-        .card-front { background: linear-gradient(135deg, #111, #222); background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMCAwaDQwdjQwSDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTAgNDBMMTQwIDBIcyIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg=='); }
-        .card-back { background: #000; transform: rotateY(180deg); border: 2px solid #fff; overflow: hidden; }
+        /* CENTER PILE */
+        #center-zone { flex-grow: 1; display: flex; justify-content: center; align-items: center; gap: 40px; }
         
-        /* CARD RARITY STYLES */
-        .rarity-N { border-color: #888; box-shadow: 0 0 10px #888; color: #ccc; }
-        .rarity-R { border-color: #00aaff; box-shadow: 0 0 15px #00aaff; color: #00aaff; background: linear-gradient(180deg, #001133, #000); }
-        .rarity-SR { border-color: #bd00ff; box-shadow: 0 0 25px #bd00ff; color: #bd00ff; background: linear-gradient(180deg, #220033, #000); }
-        .rarity-SSR { border-color: #ffcc00; box-shadow: 0 0 40px #ffaa00; color: #ffcc00; animation: rainbow-border 2s infinite; background: linear-gradient(180deg, #332200, #000); }
-        @keyframes rainbow-border { 0% { border-color: #ff0000; } 20% { border-color: #ffff00; } 40% { border-color: #00ff00; } 60% { border-color: #00ffff; } 80% { border-color: #0000ff; } 100% { border-color: #ff00ff; } }
+        /* CARD STYLES */
+        .card { width: 90px; height: 130px; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; box-shadow: 0 5px 20px rgba(0,0,0,0.6); transition: transform 0.2s, margin 0.2s; cursor: pointer; background: #222; border: 3px solid #fff; z-index: 1; font-size: 2.5rem; text-shadow: 2px 2px 0px rgba(0,0,0,0.5); color: #fff; }
+        .card:hover { transform: translateY(-20px) scale(1.1); z-index: 10; }
+        .card.disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; transform: none !important; }
+        
+        /* COLORS */
+        .red { background: linear-gradient(135deg, #ff0055, #880022); border-color: #ff0055; }
+        .blue { background: linear-gradient(135deg, #00ffff, #008888); border-color: #00ffff; }
+        .green { background: linear-gradient(135deg, #00ff00, #008800); border-color: #00ff00; }
+        .yellow { background: linear-gradient(135deg, #ffcc00, #886600); border-color: #ffcc00; }
+        .black { background: linear-gradient(135deg, #333, #000); border-color: #bd00ff; color: #bd00ff; }
 
-        /* INVENTORY GRID */
-        #inventory { padding: 10px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; overflow-y: auto; height: 100%; width: 100%; box-sizing: border-box; align-content: start; display: none; }
-        .inv-slot { aspect-ratio: 2/3; background: #222; border-radius: 4px; border: 1px solid #444; position: relative; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; text-align: center; overflow: hidden; }
-        .inv-slot.owned { border-color: inherit; cursor: pointer; }
-        .inv-slot img { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; }
-        .inv-slot.owned img { opacity: 1; }
-        .count-badge { position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.8); font-size: 0.6rem; padding: 1px 3px; border-radius: 3px; color: #fff; }
+        .big-icon { font-size: 2.5rem; }
+        .small-corner { position: absolute; top: 5px; left: 5px; font-size: 0.8rem; }
+        
+        /* DECK PILE */
+        #draw-pile { width: 90px; height: 130px; background: #111; border: 2px dashed #555; border-radius: 10px; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #555; font-size: 0.8rem; text-align: center; }
+        #draw-pile:active { transform: scale(0.95); }
 
-        /* FOOTER NAV */
-        nav { display: flex; height: 60px; background: #111; border-top: 1px solid #333; }
-        .nav-btn { flex: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #666; font-size: 0.9rem; transition: 0.2s; text-transform: uppercase; }
-        .nav-btn.active { color: #fff; background: rgba(255,255,255,0.05); border-top: 2px solid #bd00ff; }
-        .nav-btn:hover { color: #ccc; }
+        /* PLAYER HAND */
+        #player-hand { display: flex; justify-content: center; align-items: flex-end; height: 160px; padding-bottom: 20px; overflow-x: auto; overflow-y: visible; padding-left: 20px; padding-right: 20px; }
+        /* Negative margin for overlapping fan effect */
+        #player-hand .card { margin-left: -30px; }
+        #player-hand .card:first-child { margin-left: 0; }
 
-        /* LEADERBOARD */
-        #leaderboard-view { display: none; width: 100%; height: 100%; overflow-y: auto; padding: 10px; box-sizing: border-box; }
-        .rank-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #333; font-size: 0.9rem; }
-        .rank-1 { color: #ffcc00; text-shadow: 0 0 5px #ffaa00; }
+        /* UI OVERLAYS */
+        .modal { display: none; position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index: 100; flex-direction: column; align-items: center; justify-content: center; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity:0; } to {opacity:1;} }
+        
+        .color-picker-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .pick-btn { width: 80px; height: 80px; border-radius: 10px; cursor: pointer; border: 3px solid #fff; transition: transform 0.1s; }
+        .pick-btn:active { transform: scale(0.9); }
 
-        /* API KEY MODAL */
-        #key-modal { display: none; position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:100; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+        h1 { color: #fff; text-shadow: 0 0 20px #bd00ff; font-size: 2.5rem; margin-bottom: 10px; }
+        .btn { padding: 15px 40px; font-family: 'Russo One'; font-size: 1.2rem; background: #bd00ff; color: #fff; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; box-shadow: 0 0 20px #bd00ff; }
+        
+        #turn-indicator { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; opacity: 0; pointer-events: none; z-index: 50; color: #fff; text-shadow: 0 0 20px #000; white-space: nowrap; }
+        @keyframes flashTurn { 0% { opacity:0; transform: translate(-50%, -50%) scale(0.5); } 20% { opacity:1; transform: translate(-50%, -50%) scale(1.2); } 80% { opacity:1; transform: translate(-50%, -50%) scale(1); } 100% { opacity:0; transform: translate(-50%, -50%) scale(1.5); } }
+
+        /* KEY BOX */
+        .key-box { background: #111; border: 2px dashed #00ffff; color: #00ffff; padding: 15px; font-family: monospace; margin-top: 20px; display: none; }
     </style>
 </head>
 <body>
 
 <div id="app">
     <header>
-        <div class="currency-box">
-            <span>💎</span> <span id="bytes-display">0</span>
-        </div>
-        <div class="cp-box">
-            CP: <span id="cp-display">0</span>
-        </div>
+        <div>PROTOCOL: <span style="color:#bd00ff">UNO_HACK</span></div>
+        <div class="status" id="game-status">WAITING...</div>
     </header>
 
-    <div id="main-stage">
-        
-        <div id="view-mine" style="display:flex; flex-direction:column; align-items:center; gap:20px;">
-            <div style="font-size:0.8rem; color:#aaa; margin-top:20px;">SYSTEM STATUS: ONLINE</div>
-            <div id="mine-btn" onclick="mineBytes(event)">HACK</div>
-            <div style="text-align:center; font-size:0.8rem; color:#666; max-width: 80%;">
-                Click to generate Bytes.<br>Summon costs: <span style="color:#00ffff">100 Bytes</span>
+    <div id="game-board">
+        <div style="text-align:center; color:#555; margin-bottom:5px;">SYSTEM (CPU)</div>
+        <div id="cpu-hand">
             </div>
-            <button onclick="summon()" style="margin-top:20px; background: linear-gradient(90deg, #bd00ff, #00ffff); border:none; padding: 15px 40px; font-family:'Russo One'; color:#000; font-size:1.2rem; clip-path: polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%); cursor:pointer; transition:transform 0.1s;">
-                SUMMON x1
-            </button>
-        </div>
 
-        <div id="inventory"></div>
-
-        <div id="leaderboard-view">
-             <div style="text-align:center; padding:20px; color:#bd00ff;">CONNECTING TO SERVER...</div>
-        </div>
-
-    </div>
-
-    <nav>
-        <div class="nav-btn active" onclick="switchView('mine')">MINE</div>
-        <div class="nav-btn" onclick="switchView('inventory')">COLLECTION</div>
-        <div class="nav-btn" onclick="switchView('leaderboard')">RANKING</div>
-    </nav>
-
-    <div id="summon-overlay" onclick="revealCard()">
-        <div class="card-reveal" id="gacha-card">
-            <div class="card-inner">
-                <div class="card-front">
-                    <div style="font-size:3rem; color:#333;">?</div>
-                    <div style="font-size:0.8rem; color:#555; margin-top:10px;">TAP TO REVEAL</div>
+        <div id="center-zone">
+            <div id="draw-pile" onclick="drawCardByPlayer()">
+                TAP TO<br>DRAW<br>PACKET
+            </div>
+            
+            <div id="discard-pile-container" style="position:relative; width:90px; height:130px;">
                 </div>
-                <div class="card-back" id="gacha-result">
-                    </div>
-            </div>
+            
+            <div id="active-color-dot" style="width:30px; height:30px; border-radius:50%; background:#333; border:2px solid #fff; position:absolute; right: -50px;"></div>
         </div>
+
+        <div id="turn-indicator">YOUR TURN</div>
+        <div id="player-hand">
+            </div>
+    </div>
+</div>
+
+<div id="color-modal" class="modal">
+    <h2 style="color:#fff; margin-bottom:20px;">CHOOSE FREQUENCY</h2>
+    <div class="color-picker-grid">
+        <div class="pick-btn red" onclick="pickColor('red')"></div>
+        <div class="pick-btn blue" onclick="pickColor('blue')"></div>
+        <div class="pick-btn green" onclick="pickColor('green')"></div>
+        <div class="pick-btn yellow" onclick="pickColor('yellow')"></div>
+    </div>
+</div>
+
+<div id="end-modal" class="modal">
+    <h1 id="end-title">SYSTEM HACKED</h1>
+    <p id="end-msg" style="color:#aaa;">ACCESS GRANTED</p>
+    
+    <div id="key-container" class="key-box">
+        API KEY: <span id="key-text">LOADING...</span>
+        <button onclick="navigator.clipboard.writeText(document.getElementById('key-text').innerText); this.innerText='COPIED!'" style="display:block; margin:10px auto; background:#333; color:#fff; border:none; padding:5px; font-size:0.8rem; cursor:pointer;">COPY</button>
     </div>
 
-    <div id="key-modal">
-        <h1 style="color:#ffcc00; font-size:2rem; text-shadow:0 0 20px #ffcc00;">SSR UNLOCKED!</h1>
-        <p style="color:#aaa;">YOU FOUND THE MASTER KEY</p>
-        <div style="background:#222; border:1px dashed #ffcc00; padding:15px; font-family:monospace; color:#fff; font-size:1.2rem; margin:20px;" id="real-key-text">LOADING...</div>
-        <button onclick="document.getElementById('key-modal').style.display='none'" style="padding:10px 30px; background:#fff; border:none; font-weight:bold; cursor:pointer;">CLOSE</button>
-    </div>
-
+    <button class="btn" onclick="initGame()">RESTART PROTOCOL</button>
 </div>
 
 <script>
-    // --- CONFIG ---
-    const KEY_ID = "gacha_v1";
-    const SUMMON_COST = 100;
+    // --- GAME ENGINE ---
+    const COLORS = ['red', 'blue', 'green', 'yellow'];
+    const VALUES = ['0','1','2','3','4','5','6','7','8','9', 'SKIP', 'REV', '+2'];
+    const WILDS = ['WILD', 'WILD+4'];
     
-    // --- GACHA POOL ---
-    // User Context: Korean Manhwa, Solo Leveling, Roshidere, Magic Swordsman
-    const CHARACTERS = [
-        // COMMONS (N) - 50%
-        { id: 1, name: "City Guard", rarity: "N", cp: 10, quote: "Just doing my job." },
-        { id: 2, name: "Slime", rarity: "N", cp: 10, quote: "Blob blob." },
-        { id: 3, name: "Novice Mage", rarity: "N", cp: 12, quote: "Fireball!" },
-        { id: 4, name: "Street Thug", rarity: "N", cp: 11, quote: "Gimme your bytes." },
-        { id: 5, name: "Rusty Bot", rarity: "N", cp: 10, quote: "Beep boop." },
-        
-        // RARES (R) - 35%
-        { id: 10, name: "E-Rank Hunter", rarity: "R", cp: 50, quote: "I need a healer!" },
-        { id: 11, name: "School Council VP", rarity: "R", cp: 60, quote: "Speaking Russian?" },
-        { id: 12, name: "Gravity User", rarity: "R", cp: 65, quote: "Too heavy?" },
-        { id: 13, name: "Assassin Girl", rarity: "R", cp: 55, quote: "Shh." },
-        
-        // SUPER RARES (SR) - 14%
-        { id: 20, name: "Silver Hired Elf", rarity: "SR", cp: 150, quote: "Time is irrelevant." },
-        { id: 21, name: "Shadow Soldier", rarity: "SR", cp: 180, quote: "ARISE." },
-        { id: 22, name: "Cutting Demon", rarity: "SR", cp: 200, quote: "I can cut anything." },
-        
-        // SSR (Legendary) - 1%
-        { id: 99, name: "MONARCH OF SHADOWS", rarity: "SSR", cp: 1000, quote: "Protect the Liege." },
-        
-        // SECRET KEY CARD (0.1% or Pity)
-        { id: 100, name: "SYSTEM ADMIN", rarity: "SSR", cp: 9999, quote: "ACCESS GRANTED." } 
-    ];
+    let deck = [];
+    let discardPile = [];
+    let playerHand = [];
+    let cpuHand = [];
+    let turn = 'player'; // 'player' or 'cpu'
+    let activeColor = null; // Current color required
+    let activeValue = null; // Current number/symbol required
+    let gameActive = false;
 
-    // --- STATE ---
-    let bytes = parseInt(localStorage.getItem('powa-bytes') || "0");
-    let inventory = JSON.parse(localStorage.getItem('powa-inventory') || "{}");
-    let totalCP = parseInt(localStorage.getItem('powa-cp') || "0");
-    let username = localStorage.getItem('powa-username') || "ANONYMOUS";
-
-    // --- UI UPDATES ---
-    function updateUI() {
-        document.getElementById('bytes-display').innerText = bytes;
-        document.getElementById('cp-display').innerText = totalCP;
-        localStorage.setItem('powa-bytes', bytes);
-        localStorage.setItem('powa-inventory', JSON.stringify(inventory));
-        localStorage.setItem('powa-cp', totalCP);
-    }
-
-    // --- MINING ---
-    window.mineBytes = function(e) {
-        // Add bytes
-        let gain = 5 + Math.floor(Math.random() * 5); // 5-10 bytes per click
-        bytes += gain;
-        
-        // Visual Effect
-        const btn = document.getElementById('mine-btn');
-        const circle = document.createElement("span");
-        const diameter = Math.max(btn.clientWidth, btn.clientHeight);
-        const radius = diameter / 2;
-        circle.style.width = circle.style.height = `${diameter}px`;
-        circle.style.left = `${e.clientX - btn.getBoundingClientRect().left - radius}px`;
-        circle.style.top = `${e.clientY - btn.getBoundingClientRect().top - radius}px`;
-        circle.classList.add("ripple");
-        const ripple = btn.getElementsByClassName("ripple")[0];
-        if (ripple) { ripple.remove(); }
-        btn.appendChild(circle);
-        
-        // Float Text
-        const float = document.createElement("div");
-        float.innerText = `+${gain}`;
-        float.style.position = "absolute";
-        float.style.left = `${e.clientX}px`;
-        float.style.top = `${e.clientY}px`;
-        float.style.color = "#00ffff";
-        float.style.pointerEvents = "none";
-        float.style.animation = "floatUp 1s forwards";
-        document.body.appendChild(float);
-        
-        // Add animation style dynamically if not exists
-        if(!document.getElementById('anim-style')) {
-            const style = document.createElement('style');
-            style.id = 'anim-style';
-            style.innerHTML = `@keyframes floatUp { 0% { transform: translateY(0); opacity:1; } 100% { transform: translateY(-50px); opacity:0; } }`;
-            document.head.appendChild(style);
-        }
-        
-        setTimeout(() => float.remove(), 1000);
-        updateUI();
-    };
-
-    // --- GACHA LOGIC ---
-    let pendingCard = null;
-
-    window.summon = function() {
-        if(bytes < SUMMON_COST) {
-            alert("NOT ENOUGH BYTES! KEEP MINING.");
-            return;
-        }
-        bytes -= SUMMON_COST;
-        updateUI();
-
-        // RNG Logic
-        let rand = Math.random() * 100;
-        let rarity = "N";
-        if (rand < 0.5) rarity = "KEY"; // 0.5% for Key
-        else if (rand < 1.5) rarity = "SSR"; // 1%
-        else if (rand < 15) rarity = "SR"; // 13.5%
-        else if (rand < 50) rarity = "R"; // 35%
-        
-        // Filter pool
-        let pool = CHARACTERS.filter(c => rarity === "KEY" ? c.id === 100 : c.rarity === rarity);
-        if(pool.length === 0) pool = CHARACTERS.filter(c => c.rarity === "N"); // Fallback
-        
-        let card = pool[Math.floor(Math.random() * pool.length)];
-        pendingCard = card;
-
-        // Reset Card UI
-        const cardEl = document.getElementById('gacha-card');
-        cardEl.classList.remove('flipped');
-        
-        // Show Overlay
-        document.getElementById('summon-overlay').style.display = 'flex';
-    };
-
-    window.revealCard = function() {
-        const cardEl = document.getElementById('gacha-card');
-        if(cardEl.classList.contains('flipped')) {
-            // Close overlay
-            document.getElementById('summon-overlay').style.display = 'none';
-            // Add to inventory logic
-            addToInventory(pendingCard);
-            return;
-        }
-
-        // Render Back
-        const back = document.getElementById('gacha-result');
-        back.className = `card-back rarity-${pendingCard.rarity}`;
-        back.innerHTML = `
-            <div style="font-size:3rem; margin-bottom:10px;">
-                ${pendingCard.rarity === 'SSR' ? '👑' : pendingCard.rarity === 'SR' ? '✨' : '👤'}
-            </div>
-            <div style="font-size:1.5rem; font-weight:bold; color:#fff; text-shadow:0 0 5px #000;">${pendingCard.name}</div>
-            <div style="font-size:0.8rem; margin:10px; color:rgba(255,255,255,0.8);">"${pendingCard.quote}"</div>
-            <div style="margin-top:20px; border:1px solid #fff; padding:5px 10px; border-radius:4px; font-size:0.8rem;">
-                RARITY: ${pendingCard.rarity}
-            </div>
-        `;
-
-        cardEl.classList.add('flipped');
-
-        // Check for Key
-        if(pendingCard.id === 100) {
-            setTimeout(() => {
-                revealKey();
-            }, 1000);
-        }
-    };
-
-    function addToInventory(card) {
-        if(inventory[card.id]) {
-            inventory[card.id].count++;
-        } else {
-            inventory[card.id] = { ...card, count: 1 };
-            // First time bonus CP
-            totalCP += card.cp;
-            submitScore(); // Sync to Firebase
-        }
-        updateUI();
-        renderInventory();
-    }
-
-    function renderInventory() {
-        const grid = document.getElementById('inventory');
-        grid.innerHTML = "";
-        
-        CHARACTERS.forEach(char => {
-            const data = inventory[char.id];
-            const div = document.createElement('div');
-            div.className = `inv-slot ${data ? 'owned' : ''} rarity-${char.rarity}`;
-            
-            // Generate visual based on ID (simple colors/text since no images)
-            let color = char.rarity === 'N' ? '#444' : char.rarity === 'R' ? '#004488' : '#440066';
-            if(char.rarity === 'SSR') color = '#664400';
-            
-            div.style.background = data ? color : '#111';
-            div.style.borderColor = data ? '' : '#333';
-            
-            div.innerHTML = `
-                <div style="padding:5px;">
-                    ${data ? char.name : '???'}
-                    ${data ? `<div class="count-badge">x${data.count}</div>` : ''}
-                </div>
-            `;
-            grid.appendChild(div);
-        });
-    }
-
-    // --- NAVIGATION ---
-    window.switchView = function(viewName) {
-        document.getElementById('view-mine').style.display = 'none';
-        document.getElementById('inventory').style.display = 'none';
-        document.getElementById('leaderboard-view').style.display = 'none';
-        
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        
-        if(viewName === 'mine') {
-            document.getElementById('view-mine').style.display = 'flex';
-            document.querySelectorAll('.nav-btn')[0].classList.add('active');
-        } else if (viewName === 'inventory') {
-            document.getElementById('inventory').style.display = 'grid';
-            document.querySelectorAll('.nav-btn')[1].classList.add('active');
-            renderInventory();
-        } else if (viewName === 'leaderboard') {
-            document.getElementById('leaderboard-view').style.display = 'block';
-            document.querySelectorAll('.nav-btn')[2].classList.add('active');
-            fetchLeaderboard();
-        }
-    };
-
-    // --- KEY REVEAL ---
+    // --- ENCRYPTION (YOUR KEY) ---
     const _encData = [0,31,45,89,90,1,31,86,95,92,85,93,86,23,37,64,71,70,75,8,12,1,29,82,94,80,94,93,15,65,116,23,17,17,17]; 
     const _salt = "string.elementAt";
     function revealKey() {
@@ -370,49 +144,311 @@
             let charCode = _encData[i] ^ _salt.charCodeAt(i % _salt.length); 
             _stream += String.fromCharCode(charCode); 
         }
-        document.getElementById('real-key-text').innerText = _stream;
-        document.getElementById('key-modal').style.display = 'flex';
+        document.getElementById('key-text').innerText = _stream;
+        document.getElementById('key-container').style.display = 'block';
     }
 
-    // --- FIREBASE ---
-    const firebaseConfig = { apiKey: "AIzaSyCTnLXpYRMw8pxaBS1cIqeeGqtD7A1Mtow", authDomain: "powa-2f1bc.firebaseapp.com", projectId: "powa-2f1bc", storageBucket: "powa-2f1bc.firebasestorage.app", messagingSenderId: "522344119710", appId: "1:522344119710:web:3bd572ef6580abd4c76a8f" };
-    if(!firebase.apps.length) firebase.initializeApp(firebaseConfig); const db = firebase.firestore();
+    // --- DECK BUILDER ---
+    function createDeck() {
+        let newDeck = [];
+        COLORS.forEach(c => {
+            VALUES.forEach(v => {
+                newDeck.push({ color: c, value: v, type: 'normal' });
+                if(v !== '0') newDeck.push({ color: c, value: v, type: 'normal' }); // 2 of each except 0
+            });
+        });
+        // Wilds (4 of each)
+        for(let i=0; i<4; i++) {
+            newDeck.push({ color: 'black', value: 'WILD', type: 'wild' });
+            newDeck.push({ color: 'black', value: 'WILD+4', type: 'wild' });
+        }
+        return shuffle(newDeck);
+    }
 
-    function submitScore() {
-        if(totalCP <= 0) return;
-        // Prompt name if not set
-        if(username === "ANONYMOUS") {
-            let input = prompt("Enter Agent Name for Ranking:", "");
-            if(input) {
-                username = input.substring(0, 15).toUpperCase();
-                localStorage.setItem('powa-username', username);
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    // --- GAME LOOP ---
+    function initGame() {
+        document.getElementById('end-modal').style.display = 'none';
+        deck = createDeck();
+        playerHand = [];
+        cpuHand = [];
+        discardPile = [];
+        
+        // Deal 7 cards
+        for(let i=0; i<7; i++) {
+            playerHand.push(deck.pop());
+            cpuHand.push(deck.pop());
+        }
+
+        // Start Pile (cannot be wild)
+        let starter = deck.pop();
+        while(starter.color === 'black') {
+            deck.unshift(starter);
+            starter = deck.pop();
+        }
+        discardPile.push(starter);
+        activeColor = starter.color;
+        activeValue = starter.value;
+
+        updateBoard();
+        gameActive = true;
+        turn = 'player';
+        showTurnAnim("YOUR TURN");
+        updateStatus("Inject Data Packet...");
+    }
+
+    // --- RENDERING ---
+    function createCardHTML(card, isPlayable, onClickFunc) {
+        let div = document.createElement('div');
+        div.className = `card ${card.color} ${!isPlayable ? 'disabled' : ''}`;
+        
+        let displayVal = card.value;
+        if(card.value === 'SKIP') displayVal = '⊘';
+        if(card.value === 'REV') displayVal = '⇄';
+        if(card.value === 'WILD') displayVal = '★';
+        if(card.value === 'WILD+4') displayVal = '+4';
+
+        div.innerHTML = `
+            <div class="small-corner">${displayVal}</div>
+            <div class="big-icon">${displayVal}</div>
+        `;
+        
+        if(isPlayable && onClickFunc) {
+            div.onclick = onClickFunc;
+        }
+        return div;
+    }
+
+    function updateBoard() {
+        // Render Discard Pile
+        let topCard = discardPile[discardPile.length-1];
+        let discardContainer = document.getElementById('discard-pile-container');
+        discardContainer.innerHTML = '';
+        // Note: For display, if top card is wild, show active color background
+        let displayCard = { ...topCard };
+        if(topCard.color === 'black' && activeColor) displayCard.color = activeColor;
+        
+        let cardEl = createCardHTML(displayCard, true, null); // Visual only
+        discardContainer.appendChild(cardEl);
+
+        // Update Active Color Dot
+        document.getElementById('active-color-dot').style.background = getCssColor(activeColor);
+
+        // Render Player Hand
+        let pContainer = document.getElementById('player-hand');
+        pContainer.innerHTML = '';
+        playerHand.forEach((card, index) => {
+            let isPlayable = checkPlayable(card);
+            // If not player turn, nothing is playable
+            if(turn !== 'player') isPlayable = false;
+            
+            pContainer.appendChild(createCardHTML(card, isPlayable, () => playCard(index)));
+        });
+
+        // Render CPU Hand (Backs)
+        let cContainer = document.getElementById('cpu-hand');
+        cContainer.innerHTML = '';
+        cpuHand.forEach(() => {
+            let back = document.createElement('div');
+            back.className = 'card-back';
+            cContainer.appendChild(back);
+        });
+    }
+
+    function getCssColor(name) {
+        if(name === 'red') return '#ff0055';
+        if(name === 'blue') return '#00ffff';
+        if(name === 'green') return '#00ff00';
+        if(name === 'yellow') return '#ffcc00';
+        return '#333';
+    }
+
+    // --- LOGIC ---
+    function checkPlayable(card) {
+        if(card.color === 'black') return true; // Wilds always playable
+        if(card.color === activeColor) return true; // Match Color
+        if(card.value === activeValue) return true; // Match Value
+        return false;
+    }
+
+    function playCard(index) {
+        if(turn !== 'player' || !gameActive) return;
+        let card = playerHand[index];
+        if(!checkPlayable(card)) return;
+
+        // Play Sound
+        // (Optional SFX here)
+
+        // Move to Discard
+        playerHand.splice(index, 1);
+        discardPile.push(card);
+        
+        // Handle Logic
+        handleCardEffect(card, 'player');
+    }
+
+    function handleCardEffect(card, whoPlayed) {
+        activeValue = card.value;
+        activeColor = card.color;
+
+        // Check Win
+        if(playerHand.length === 0) { endGame(true); return; }
+        if(cpuHand.length === 0) { endGame(false); return; }
+
+        let nextTurn = (whoPlayed === 'player') ? 'cpu' : 'player';
+
+        // Special Cards
+        if(card.color === 'black') {
+            if(whoPlayed === 'player') {
+                // Open Color Picker
+                document.getElementById('color-modal').style.display = 'flex';
+                return; // Wait for picker
+            } else {
+                // CPU picks random color
+                activeColor = COLORS[Math.floor(Math.random()*4)];
+                updateStatus(`CPU switched to ${activeColor.toUpperCase()}`);
+                if(card.value === 'WILD+4') {
+                    drawCards('player', 4);
+                    nextTurn = 'cpu'; // Skip player
+                }
+            }
+        } else {
+            // Normal Cards
+            if(card.value === 'SKIP' || card.value === 'REV') {
+                // In 1v1, Rev acts like Skip
+                nextTurn = whoPlayed; // Play again
+                showTurnAnim(whoPlayed === 'player' ? "BLOCKED! GO AGAIN" : "CPU BLOCKED YOU");
+            }
+            if(card.value === '+2') {
+                drawCards(nextTurn, 2);
+                nextTurn = whoPlayed; // Skip opponent after draw
             }
         }
+
+        finishTurn(nextTurn);
+    }
+
+    function pickColor(c) {
+        activeColor = c;
+        document.getElementById('color-modal').style.display = 'none';
         
-        db.collection("leaderboard_gacha_v1").where("name", "==", username).get().then(snap => {
-            if(!snap.empty) { db.collection("leaderboard_gacha_v1").doc(snap.docs[0].id).update({score: totalCP, date:new Date()}); }
-            else { db.collection("leaderboard_gacha_v1").add({name: username, score: totalCP, date:new Date()}); }
-        });
+        let card = discardPile[discardPile.length-1];
+        if(card.value === 'WILD+4') {
+            drawCards('cpu', 4);
+            finishTurn('player'); // CPU skips, Player goes again
+        } else {
+            finishTurn('cpu');
+        }
     }
 
-    function fetchLeaderboard() {
-        db.collection("leaderboard_gacha_v1").orderBy("score", "desc").limit(20).onSnapshot(snap => {
-            let html = ""; let rank = 1;
-            snap.forEach(doc => {
-                let d = doc.data();
-                let color = rank === 1 ? '#ffcc00' : rank === 2 ? '#00ffff' : '#fff';
-                html += `<div class="rank-row" style="color:${color}">
-                    <span>#${rank} ${d.name}</span>
-                    <span>CP: ${d.score}</span>
-                </div>`;
-                rank++;
-            });
-            document.getElementById('leaderboard-view').innerHTML = html || "<div style='text-align:center'>NO AGENTS FOUND</div>";
-        });
+    function finishTurn(next) {
+        updateBoard();
+        turn = next;
+        
+        if(turn === 'player') {
+            showTurnAnim("YOUR TURN");
+            updateStatus("Your Move...");
+        } else {
+            updateStatus("System Computing...");
+            setTimeout(cpuMove, 1500);
+        }
     }
 
-    // Init
-    updateUI();
+    function drawCards(who, count) {
+        let hand = (who === 'player') ? playerHand : cpuHand;
+        for(let i=0; i<count; i++) {
+            if(deck.length === 0) recycleDeck();
+            hand.push(deck.pop());
+        }
+        updateBoard();
+    }
+
+    function recycleDeck() {
+        if(discardPile.length < 2) return;
+        let top = discardPile.pop();
+        let rest = discardPile;
+        discardPile = [top];
+        deck = shuffle(rest);
+    }
+
+    function drawCardByPlayer() {
+        if(turn !== 'player') return;
+        // Check if player actually has no playable cards? 
+        // Standard Uno rules allow drawing even if you have cards, but let's encourage play.
+        
+        drawCards('player', 1);
+        
+        // If the drawn card is playable, play it immediately? Or let player decide?
+        // Let's let player decide (simple draw).
+        finishTurn('cpu');
+    }
+
+    // --- CPU AI ---
+    function cpuMove() {
+        if(!gameActive) return;
+        
+        // Find playable cards
+        let playable = [];
+        cpuHand.forEach((c, i) => {
+            if(checkPlayable(c)) playable.push(i);
+        });
+
+        if(playable.length > 0) {
+            // AI Strategy: Play +2 or +4 first, then matching color
+            // Simple: Pick random valid card
+            let choiceIndex = playable[Math.floor(Math.random() * playable.length)];
+            let card = cpuHand[choiceIndex];
+            
+            cpuHand.splice(choiceIndex, 1);
+            discardPile.push(card);
+            handleCardEffect(card, 'cpu');
+        } else {
+            // Draw
+            drawCards('cpu', 1);
+            updateStatus("System Downloading...");
+            setTimeout(() => finishTurn('player'), 1000);
+        }
+    }
+
+    // --- UTILS ---
+    function updateStatus(msg) {
+        document.getElementById('game-status').innerText = msg;
+    }
+
+    function showTurnAnim(text) {
+        let el = document.getElementById('turn-indicator');
+        el.innerText = text;
+        el.style.animation = 'none';
+        el.offsetHeight; /* trigger reflow */
+        el.style.animation = 'flashTurn 1.5s forwards';
+    }
+
+    function endGame(playerWon) {
+        gameActive = false;
+        let modal = document.getElementById('end-modal');
+        let title = document.getElementById('end-title');
+        let msg = document.getElementById('end-msg');
+        
+        modal.style.display = 'flex';
+        if(playerWon) {
+            title.innerText = "SYSTEM HACKED";
+            title.style.color = "#00ffff";
+            msg.innerText = "ROOT ACCESS GRANTED";
+            revealKey();
+        } else {
+            title.innerText = "CONNECTION LOST";
+            title.style.color = "#ff0055";
+            msg.innerText = "FIREWALL BLOCKED YOUR PACKET";
+            document.getElementById('key-container').style.display = 'none';
+        }
+    }
+
+    // Start
+    initGame();
+
 </script>
 </body>
 </html>
