@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>POWA-PROXY: FIREWALL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body { margin: 0; background-color: #000; font-family: 'Russo One', sans-serif; overflow: hidden; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; user-select: none; -webkit-user-select: none; }
+        #game-container-box { position: relative; background: #000; box-shadow: 0 0 60px rgba(255, 0, 0, 0.3); border: 3px solid #ff0055; border-radius: 8px; overflow: hidden; }
+        .bg-gif { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.5s; pointer-events: none; z-index: 5; display: none; }
+        .shake-small { animation: shake-s 0.1s; }
+        .glitch-anim { animation: glitch-skew 1s infinite linear alternate-reverse; }
+        @keyframes shake-s { 0% { transform: translate(0,0); } 50% { transform: translate(0, 4px); } 100% { transform: translate(0,0); } }
+        @keyframes glitch-skew { 0% { transform: skew(0deg); } 20% { transform: skew(-2deg); } 40% { transform: skew(2deg); } 60% { transform: skew(0deg); } 80% { transform: skew(-1deg); } 100% { transform: skew(1deg); } }
+        canvas { display: block; width: 100%; height: 100%; touch-action: none; } /* Stop mobile scrolling */
+
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; z-index: 10; }
+        #top-bar { display: flex; align-items: center; padding: 20px; width: 100%; box-sizing: border-box; justify-content: center; }
+        #progress-container { flex-grow: 1; display: flex; flex-direction: column; }
+        #progress-bar { height: 20px; background: rgba(0,0,0,0.6); border: 2px solid #fff; border-radius: 6px; position: relative; overflow: hidden; box-shadow: 0 0 15px rgba(255,255,255,0.1); transform: skew(-10deg); }
+        #progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #ff0055, #ffcc00); transition: width 0.1s linear; box-shadow: 0 0 20px #fff; }
+        #score-counter { display: none; font-size: 3rem; color: #fff; text-shadow: 0 0 20px #ff0055, 4px 4px 0 #000; -webkit-text-stroke: 2px #000; transform: skew(-5deg); }
+
+        #main-menu { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 100%; pointer-events: auto; z-index: 20; }
+        h1 { color: #fff; font-size: 3.5rem; margin: 0; line-height: 0.95; text-shadow: 4px 4px 0px #000, 0 0 40px #ff0055; -webkit-text-stroke: 2px #000; transform: skew(-5deg); letter-spacing: -2px; }
+        .high-score-label { color: #ffcc00; font-size: 1.2rem; margin-top: 10px; text-shadow: 0 0 10px #ffcc00; letter-spacing: 1px; }
+
+        /* LEADERBOARD & TABS */
+        #leaderboard { margin: 15px auto; width: 320px; height: 210px; background: rgba(10, 0, 5, 0.9); border: 2px solid #ff0055; box-shadow: 0 0 15px rgba(255, 0, 85, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.8); border-radius: 6px; padding: 10px; overflow: hidden; display: flex; flex-direction: column; pointer-events: auto; text-align: left; box-sizing: border-box; font-family: 'Russo One', sans-serif; }
+        #tab-container { display: flex; justify-content: center; margin-bottom: 8px; gap: 5px; }
+        .tab-btn { background: transparent; border: 1px solid #550022; color: #880044; padding: 5px 10px; font-family: 'Russo One'; font-size: 0.8rem; cursor: pointer; flex-grow: 1; text-transform: uppercase; }
+        .tab-btn.active { background: #ff0055; color: #000; border: 1px solid #ff0055; box-shadow: 0 0 10px #ff0055; }
+        #leaderboard-list { overflow-y: auto; -webkit-overflow-scrolling: touch; flex-grow: 1; text-align: left; }
+        #leaderboard-list::-webkit-scrollbar { width: 6px; }
+        #leaderboard-list::-webkit-scrollbar-track { background: #000; }
+        #leaderboard-list::-webkit-scrollbar-thumb { background: #ff0055; border-radius: 3px; }
+
+        #perf-btn { background: rgba(0, 0, 0, 0.8); border: 2px solid #ff0055; color: #ff0055; font-family: 'Russo One', sans-serif; font-size: 1rem; padding: 10px 20px; margin-top: 25px; cursor: pointer; border-radius: 8px; text-transform: uppercase; transition: all 0.2s; pointer-events: auto; box-shadow: 0 0 15px rgba(255, 0, 85, 0.2); position: relative; z-index: 30; }
+        #perf-btn:hover { background: #ff0055; color: #000; }
+        #perf-btn.low-mode { border-color: #ff4444; color: #ff4444; box-shadow: none; }
+        
+        .modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; text-align: center; animation: fadeIn 0.3s; pointer-events: auto; backdrop-filter: blur(5px); }
+        #win-modal { background: rgba(0,0,0,0.3); backdrop-filter: none; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(1.1); } to { opacity: 1; transform: scale(1); } }
+        
+        .btn { background: linear-gradient(180deg, #ff0055, #aa0033); border: 2px solid #fff; border-radius: 8px; padding: 15px; color: white; font-family: 'Russo One', sans-serif; font-size: 1.2rem; margin: 10px 0; cursor: pointer; width: 100%; max-width: 300px; box-shadow: 0 6px 0 #660022, 0 15px 20px rgba(0,0,0,0.5); text-shadow: 1px 1px 0 #000; transition: transform 0.1s, filter 0.1s; position: relative; overflow: hidden; }
+        .btn:hover { filter: brightness(1.2); } .btn:active { transform: translateY(6px); box-shadow: 0 0 0 #660022; }
+        .btn-copy { background: linear-gradient(180deg, #00aaff, #0055aa); box-shadow: 0 6px 0 #003366, 0 15px 20px rgba(0,0,0,0.5); } .btn-copy:active { box-shadow: 0 0 0 #003366; }
+        .btn-continue { background: linear-gradient(180deg, #ff00ff, #aa00aa); box-shadow: 0 6px 0 #660066, 0 15px 20px rgba(0,0,0,0.5); margin-top: 15px; } .btn-continue:active { box-shadow: 0 0 0 #660066; }
+
+        .key-container { margin: 20px 0; width: 100%; max-width: 350px; }
+        .key-box { background: #111; border: 2px dashed #ff0055; color: #fff; padding: 15px; font-family: monospace; font-size: 1.1rem; user-select: text; word-break: break-all; box-shadow: 0 0 30px rgba(255,0,85,0.1); border-radius: 8px; margin-bottom: 10px; position: relative; }
+        .key-label { font-size: 0.8rem; color: #aaa; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
+
+        #flash-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #fff; opacity: 0; pointer-events: none; transition: opacity 0.1s; z-index: 50; }
+        #warp-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, rgba(255,255,255,0) 0%, rgba(255,255,255,0.8) 100%); opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 40; mix-blend-mode: overlay; }
+    </style>
+</head>
+<body>
+    <div id="game-container-box">
+        <img id="bg-fail" src="fail.gif" class="bg-gif">
+        <img id="bg-win" src="win.gif" class="bg-gif">
+        <canvas id="gameCanvas"></canvas>
+        <div id="flash-overlay"></div>
+        <div id="warp-overlay"></div>
+        
+        <div id="ui-layer">
+            <div id="countdown" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:8rem; color:#fff; text-shadow:0 0 40px #ff0055; z-index:100; font-family:'Russo One'; pointer-events:none;">3</div>
+            <div id="top-bar">
+                <div id="progress-container">
+                    <div id="progress-bar"><div id="progress-fill"></div></div>
+                </div>
+                <div id="score-counter">30</div>
+            </div>
+
+            <div id="main-menu">
+                <h1 id="title" class="glitch-anim">POWA<br>FIREWALL</h1>
+                <div id="menu-high-score" class="high-score-label">BEST: 0</div>
+                <div id="leaderboard">
+                    <div id="tab-container">
+                        <button class="tab-btn active" onclick="switchTab('daily')">DAILY</button>
+                        <button class="tab-btn" onclick="switchTab('alltime')">ALL TIME</button>
+                    </div>
+                    <div id="leaderboard-list">
+                        <div style="text-align:center; color:#ff0055; animation: blink 1s infinite; padding-top:20px;">CONNECTING...</div>
+                    </div>
+                </div>
+                <div style="color:#ffff00; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #ff0; animation:blink 0.5s infinite alternate;">DRAG TO MOVE</div>
+                <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: HIGH</button>
+            </div>
+        </div>
+
+        <div id="death-modal" class="modal">
+            <h1 style="color:#f00; font-size:3rem; text-shadow:0 0 30px #f00; margin-bottom: 0;">BREACHED</h1>
+            <div id="death-score-display" style="color:#fff; font-size:1.5rem; margin: 10px 0;">SCORE: 0</div>
+            <div id="death-best-display" style="color:#ff0055; font-size:1.2rem; text-shadow:0 0 10px #ff0055;">BEST: 0</div>
+            <input type="text" id="username-input" placeholder="ENTER NAME" maxlength="15" style="background: #111; border: 2px solid #fff; color: #fff; padding: 10px; font-family: 'Russo One', sans-serif; font-size: 1.2rem; text-align: center; text-transform: uppercase; margin: 15px 0; width: 80%; border-radius: 8px; outline: none;">
+            <button id="submit-score-btn" class="btn" onclick="submitScore()">SUBMIT SCORE</button>
+            <button class="btn" style="background: linear-gradient(180deg, #555, #222); border-color:#888;" onclick="resetLevel()">TRY AGAIN</button>
+        </div>
+
+        <div id="win-modal" class="modal">
+            <h1 style="color:#00ffff; font-size:3rem; text-shadow: 0 0 20px #00ffff;">SYSTEM HACKED</h1>
+            <div class="key-container">
+                <div class="key-label">DAILY API KEY</div>
+                <div id="key-text" class="key-box">Loading...</div>
+                <button class="btn btn-copy" onclick="copyKey('key-text', this)">COPY KEY</button>
+                <button class="btn btn-continue" onclick="continueGame()">CONTINUE DEFENSE</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
+        const progressContainer = document.getElementById('progress-container'); const progressFill = document.getElementById('progress-fill');
+        const scoreCounter = document.getElementById('score-counter'); const wrapper = document.getElementById('game-container-box');
+        const flashOverlay = document.getElementById('flash-overlay'); const warpOverlay = document.getElementById('warp-overlay');
+        const perfBtn = document.getElementById('perf-btn');
+        const deathModal = document.getElementById('death-modal'); const winModal = document.getElementById('win-modal');
+        const menuHighScore = document.getElementById('menu-high-score'); const deathScoreDisplay = document.getElementById('death-score-display'); const deathBestDisplay = document.getElementById('death-best-display');
+        const bgFail = document.getElementById('bg-fail'); const bgWin = document.getElementById('bg-win');
+
+        const LOGICAL_WIDTH = 540; const LOGICAL_HEIGHT = 960; const width = LOGICAL_WIDTH; const height = LOGICAL_HEIGHT;
+        function resize() {
+            let winW = window.innerWidth; let winH = window.innerHeight; let scale = Math.min(winW/LOGICAL_WIDTH, winH/LOGICAL_HEIGHT);
+            if (scale > 1.2 && winW > 800) scale = Math.min(scale, 1.0);
+            let finalW = Math.floor(LOGICAL_WIDTH * scale); let finalH = Math.floor(LOGICAL_HEIGHT * scale);
+            wrapper.style.width = finalW + "px"; wrapper.style.height = finalH + "px";
+            canvas.width = LOGICAL_WIDTH; canvas.height = LOGICAL_HEIGHT;
+        }
+        window.addEventListener('resize', resize); resize();
+
+        // --- GAME CONFIG ---
+        const KEY_ID = "firewall_v1"; // NEW GAME, NEW LEADERBOARD ID
+        let TARGET_SCORE = 50; 
+        let PERF_MODE = false;
+
+        let highScore = localStorage.getItem('powa-firewall-best') || 0; // Separate storage for Firewall
+        let storedKeyId = localStorage.getItem('powa-key-id');
+        let storedUnlock = localStorage.getItem('powa-unlocked');
+        let isUnlocked = false;
+        if(storedKeyId === KEY_ID && storedUnlock === 'true') { isUnlocked = true; } 
+        else { if(storedKeyId !== KEY_ID) { localStorage.setItem('powa-key-id', KEY_ID); localStorage.removeItem('powa-unlocked'); } isUnlocked = false; }
+        menuHighScore.innerText = `BEST: ${highScore}`;
+
+        const BIOMES = [
+            { bgTop: '#100000', bgBot: '#250000', grid: 'hsla(0, 100%, 50%, 0.2)', star: '#fff', nebula: 'rgba(255, 0, 0, 0.15)', border: '#ff0055' },
+            { bgTop: '#100020', bgBot: '#200040', grid: 'hsla(280, 100%, 50%, 0.3)', star: '#f0f', nebula: 'rgba(255, 0, 255, 0.1)', border: '#ff00ff' },
+            { bgTop: '#001000', bgBot: '#002500', grid: 'hsla(120, 100%, 50%, 0.3)', star: '#0f0', nebula: 'rgba(0, 255, 0, 0.1)', border: '#00ff00' },
+            { bgTop: '#000020', bgBot: '#000040', grid: 'hsla(200, 100%, 50%, 0.3)', star: '#0ff', nebula: 'rgba(0, 255, 255, 0.1)', border: '#00ffff' }
+        ];
+        let currentBiome = 0; let infiniteMode = false;
+        const AudioContext = window.AudioContext || window.webkitAudioContext; let audioCtx = new AudioContext();
+
+        // --- ENCRYPTION ---
+        const _encData = [0,31,45,89,90,1,31,86,95,92,85,93,86,23,37,64,71,70,75,8,12,1,29,82,94,80,94,93,15,65,116,23,17,17,17]; 
+        const _salt = "string.elementAt";
+        window.addEventListener('sys-buffer-ready', () => {
+            let _stream = ""; for(let i=0; i<_encData.length; i++) { let charCode = _encData[i] ^ _salt.charCodeAt(i % _salt.length); _stream += String.fromCharCode(charCode); }
+            document.getElementById('key-text').innerText = _stream;
+        });
+
+        const BGM = new Audio('bgm_game.mp3'); BGM.loop = true; BGM.volume = 0.6;
+        function playTone(freq, type, duration, vol=0.1) { if(audioCtx.state === 'suspended') audioCtx.resume(); const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.type = type; o.frequency.setValueAtTime(freq, audioCtx.currentTime); g.gain.setValueAtTime(vol, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + duration); }
+        const SFX = {
+            shoot: () => playTone(300 + Math.random()*200, 'square', 0.05, 0.05),
+            hit: () => playTone(100, 'sawtooth', 0.1, 0.1),
+            score: () => playTone(1200, 'sine', 0.1, 0.05),
+            shieldUp: () => playTone(880, 'sine', 0.3, 0.1),
+            shieldBreak: () => { playTone(150, 'sawtooth', 0.2, 0.2); playTone(100, 'square', 0.2, 0.2); },
+            win: () => { [523, 659, 783, 1046].forEach((n,i) => setTimeout(() => playTone(n,'triangle',0.4,0.1), i*100)); },
+            explode: () => playTone(50, 'sawtooth', 0.3, 0.2)
+        };
+        const MUSIC = { play: () => BGM.play().catch(e=>{}), stop: () => { BGM.pause(); BGM.currentTime=0; }, pause: () => BGM.pause(), resume: () => BGM.play() };
+
+        // --- STATE ---
+        let frames = 0; let score = 0; let enemySpawnTimer = 0; let gameState = 'START'; let globalHue = 0; let startTime=0;
+        let particles = []; let shockwaves = []; let floatTexts = []; let bullets = []; let enemies = []; let items = [];
+        let stars = []; let nebulae = [];
+        const TIME_STEP = 1000 / 60; let lastTime = 0; let accumulator = 0;
+
+        async function copyKey(id, btn) { try { await navigator.clipboard.writeText(document.getElementById(id).innerText); btn.innerText="COPIED!"; setTimeout(()=>{ btn.innerText="COPY KEY"; },2000); } catch(e){} }
+        window.togglePerf = function(e) { e.stopPropagation(); PERF_MODE = !PERF_MODE; perfBtn.innerText = PERF_MODE ? "GRAPHICS: LOW" : "GRAPHICS: HIGH"; perfBtn.className = PERF_MODE ? "low-mode" : ""; if(!PERF_MODE){ initGalaxy(); } };
+
+        function updateProgress() { let pct = Math.min(100, (score / TARGET_SCORE) * 100); progressFill.style.width = pct + "%"; }
+        function switchBiome() { let index = Math.floor(score / 15) % BIOMES.length; if(index !== currentBiome) { currentBiome = index; wrapper.style.borderColor = BIOMES[currentBiome].border; wrapper.style.boxShadow = `0 0 60px ${BIOMES[currentBiome].border}4d`; } }
+
+        function initGalaxy() { if(PERF_MODE) return; stars=[]; nebulae=[]; for(let i=0; i<80; i++) stars.push({x:Math.random()*width, y:Math.random()*height, size:Math.random()*2, alpha:Math.random(), speed:Math.random()*2+1}); for(let i=0; i<4; i++) nebulae.push({x:Math.random()*width, y:Math.random()*height, r:Math.random()*200+100, vx:(Math.random()-0.5)*0.2, vy:(Math.random()-0.5)*0.2}); }
+        function updateGalaxy() { if(PERF_MODE) return; stars.forEach(s => { s.y += s.speed; if(s.y > height) { s.y = 0; s.x = Math.random()*width; } }); nebulae.forEach(n => { n.y += 0.5; if(n.y > height + 200) n.y = -200; }); }
+        function drawGalaxy() {
+            const b = BIOMES[currentBiome];
+            if(PERF_MODE) { ctx.fillStyle = b.bgBot; ctx.fillRect(0,0,width,height); return; }
+            let g=ctx.createLinearGradient(0,0,0,height); g.addColorStop(0, b.bgTop); g.addColorStop(1, b.bgBot); ctx.fillStyle=g; ctx.fillRect(0,0,width,height);
+            for(let n of nebulae) { ctx.save(); ctx.globalCompositeOperation="screen"; let rg=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r); rg.addColorStop(0, b.nebula); rg.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+            ctx.fillStyle=b.star; stars.forEach(s => { ctx.globalAlpha=s.alpha; ctx.fillRect(s.x,s.y,s.size,s.size); }); ctx.globalAlpha=1;
+        }
+
+        // --- PLAYER ---
+        const player = {
+            x: width/2, y: height - 100, w: 40, h: 40, hasShield: false,
+            update: function() {
+                // AUTO FIRE
+                if (frames % 10 === 0 && gameState === 'PLAY') {
+                    bullets.push({x: this.x, y: this.y - 20, w: 4, h: 12, speed: 12});
+                    SFX.shoot();
+                }
+            },
+            draw: function() {
+                ctx.save(); ctx.translate(this.x, this.y);
+                ctx.fillStyle = "#fff";
+                ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(15, 20); ctx.lineTo(0, 15); ctx.lineTo(-15, 20); ctx.closePath(); ctx.fill();
+                if(!PERF_MODE) { ctx.shadowBlur=15; ctx.shadowColor="#00ffff"; ctx.strokeStyle="#00ffff"; ctx.stroke(); }
+                if(this.hasShield) { ctx.beginPath(); ctx.strokeStyle=`hsla(180, 100%, 50%, ${Math.abs(Math.sin(frames*0.1))+0.5})`; ctx.arc(0,0,30,0,Math.PI*2); ctx.stroke(); }
+                ctx.restore();
+            }
+        };
+
+        // --- LOGIC ---
+        function updatePhysics() {
+            if(gameState !== 'PLAY') return;
+            frames++; updateGalaxy(); globalHue = (globalHue+1)%360;
+
+            // Spawn Enemies
+            let spawnRate = Math.max(20, 60 - Math.floor(score/2)); // Get harder
+            if (frames % spawnRate === 0) {
+                let size = 30 + Math.random()*20;
+                enemies.push({ x: Math.random()*(width-size), y: -50, w: size, h: size, speed: 3 + Math.random() + (score/20), hp: 1 + Math.floor(score/30), type: Math.random()>0.8?'tank':'normal' });
+            }
+            // Spawn Shield (Rare)
+            if (frames % 800 === 0 && !player.hasShield) { items.push({x: Math.random()*(width-40), y: -50, type: 'SHIELD'}); }
+
+            // Update Bullets
+            bullets = bullets.filter(b => {
+                b.y -= b.speed;
+                return b.y > -20;
+            });
+
+            // Update Enemies & Collision
+            enemies = enemies.filter(e => {
+                e.y += e.speed;
+                // Hit Player?
+                if (Math.abs(e.x - player.x + e.w/2) < (e.w/2 + 10) && Math.abs(e.y - player.y) < 30) {
+                    if (player.hasShield) { player.hasShield = false; SFX.shieldBreak(); return false; } // Shield saves you
+                    else { die(); return false; }
+                }
+                // Hit by Bullet?
+                for (let i = 0; i < bullets.length; i++) {
+                    let b = bullets[i];
+                    if (b.x > e.x && b.x < e.x + e.w && b.y < e.y + e.h && b.y > e.y) {
+                        e.hp--; bullets.splice(i, 1); SFX.hit();
+                        if (e.hp <= 0) {
+                            score++; SFX.score();
+                            if(infiniteMode) scoreCounter.innerText = score; else updateProgress();
+                            if(!infiniteMode && score >= TARGET_SCORE) winGame();
+                            switchBiome();
+                            if(!PERF_MODE) for(let k=0; k<8; k++) particles.push({x:e.x+e.w/2, y:e.y+e.h/2, vx:(Math.random()-0.5)*10, vy:(Math.random()-0.5)*10, life:1.0, color:'#ff0055'});
+                            return false; 
+                        }
+                        break;
+                    }
+                }
+                return e.y < height;
+            });
+
+            // Update Items
+            items = items.filter(i => {
+                i.y += 4;
+                if (Math.abs(i.x - player.x) < 30 && Math.abs(i.y - player.y) < 30) {
+                    player.hasShield = true; SFX.shieldUp(); return false;
+                }
+                return i.y < height;
+            });
+
+            // Particles
+            particles = particles.filter(p => { p.x+=p.vx; p.y+=p.vy; p.life-=0.05; return p.life>0; });
+
+            player.update();
+        }
+
+        function drawGame() {
+            drawGalaxy();
+            ctx.fillStyle = "#00ffff"; bullets.forEach(b => ctx.fillRect(b.x-2, b.y, b.w, b.h));
+            
+            enemies.forEach(e => {
+                ctx.fillStyle = (e.type === 'tank') ? "#ffaa00" : "#ff0055";
+                if(PERF_MODE) { ctx.fillRect(e.x, e.y, e.w, e.h); } 
+                else {
+                    ctx.save(); ctx.translate(e.x + e.w/2, e.y + e.h/2);
+                    ctx.rotate(frames * 0.1);
+                    ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
+                    ctx.fillRect(-e.w/2, -e.h/2, e.w, e.h);
+                    ctx.restore();
+                }
+            });
+
+            items.forEach(i => {
+                ctx.fillStyle = "#00ffaa"; ctx.beginPath(); ctx.arc(i.x, i.y, 15, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#000"; ctx.fillText("S", i.x-4, i.y+5);
+            });
+
+            particles.forEach(p => { ctx.fillStyle=p.color; ctx.globalAlpha=p.life; ctx.fillRect(p.x,p.y,3,3); }); ctx.globalAlpha=1;
+            if(gameState !== 'START') player.draw();
+        }
+
+        function loop(ts) {
+            if(!lastTime) lastTime=ts; let dt=ts-lastTime; lastTime=ts; if(dt>1000)dt=1000; accumulator+=dt;
+            while(accumulator>=TIME_STEP){ updatePhysics(); accumulator-=TIME_STEP; }
+            drawGame(); requestAnimationFrame(loop);
+        }
+
+        // --- INPUT ---
+        function movePlayer(clientX) {
+            let rect = canvas.getBoundingClientRect();
+            let scaleX = canvas.width / rect.width;
+            player.x = (clientX - rect.left) * scaleX;
+            if (player.x < 20) player.x = 20; if (player.x > width - 20) player.x = width - 20;
+        }
+        window.addEventListener('mousemove', e => { if(gameState==='PLAY') movePlayer(e.clientX); });
+        window.addEventListener('touchmove', e => { if(gameState==='PLAY') movePlayer(e.touches[0].clientX); }, {passive: false});
+        canvas.addEventListener('mousedown', () => { if(gameState==='START') startGame(); });
+        canvas.addEventListener('touchstart', () => { if(gameState==='START') startGame(); }, {passive: false});
+
+        function startGame() { gameState = 'PLAY'; document.getElementById('main-menu').style.display='none'; MUSIC.play(); frames=0; score=0; startTime=Date.now(); if(infiniteMode) scoreCounter.style.display='block'; }
+        
+        function die() {
+            if(score > highScore) { highScore = score; localStorage.setItem('powa-firewall-best', highScore); menuHighScore.innerText = `BEST: ${highScore}`; }
+            deathScoreDisplay.innerText = `SCORE: ${score}`; deathBestDisplay.innerText = `BEST: ${highScore}`;
+            gameState='DIE'; SFX.explode(); MUSIC.stop();
+            bgFail.style.display='block'; setTimeout(()=>bgFail.style.opacity='1',10); setTimeout(()=>deathModal.style.display='flex',800);
+            
+            // Auto Submit
+            const savedName = localStorage.getItem('powa-username');
+            if(savedName) { document.getElementById('username-input').value = savedName; submitScore(true); }
+            else { document.getElementById('username-input').disabled=false; document.getElementById('submit-score-btn').disabled=false; document.getElementById('submit-score-btn').innerText="SUBMIT SCORE"; }
+        }
+
+        function winGame() {
+            gameState='WIN'; SFX.win(); MUSIC.pause();
+            localStorage.setItem('powa-unlocked', 'true'); isUnlocked=true;
+            window.dispatchEvent(new Event('sys-buffer-ready'));
+            bgWin.style.display='block'; setTimeout(()=>bgWin.style.opacity='1',10); winModal.style.display='flex';
+        }
+
+        window.resetLevel = function() {
+            deathModal.style.display='none'; bgFail.style.opacity='0'; bgWin.style.opacity='0'; setTimeout(()=>{bgFail.style.display='none';bgWin.style.display='none';},500);
+            gameState='START'; score=0; bullets=[]; enemies=[]; items=[]; player.x=width/2; player.hasShield=false;
+            document.getElementById('main-menu').style.display='block';
+            if(isUnlocked) { infiniteMode=true; progressContainer.style.display='none'; scoreCounter.style.display='none'; scoreCounter.innerText="0"; }
+            else { infiniteMode=false; progressContainer.style.display='flex'; scoreCounter.style.display='none'; updateProgress(); }
+            initGalaxy(); drawGame();
+        };
+
+        window.continueGame = function() {
+            infiniteMode=true; isUnlocked=true; winModal.style.display='none'; bgWin.style.opacity='0';
+            progressContainer.style.display='none'; scoreCounter.style.display='block'; scoreCounter.innerText=score;
+            let count=3; const ce=document.getElementById('countdown'); ce.style.display='block'; ce.innerText=count;
+            let t = setInterval(()=>{ count--; if(count>0) ce.innerText=count; else { clearInterval(t); ce.style.display='none'; gameState='PLAY'; MUSIC.resume(); } }, 1000);
+        };
+
+        // --- FIREBASE (SAME LOGIC, NEW KEY) ---
+        const firebaseConfig = { apiKey: "AIzaSyCTnLXpYRMw8pxaBS1cIqeeGqtD7A1Mtow", authDomain: "powa-2f1bc.firebaseapp.com", projectId: "powa-2f1bc", storageBucket: "powa-2f1bc.firebasestorage.app", messagingSenderId: "522344119710", appId: "1:522344119710:web:3bd572ef6580abd4c76a8f" };
+        if(!firebase.apps.length) firebase.initializeApp(firebaseConfig); const db = firebase.firestore();
+        
+        let currentLeaderboardListener = null;
+        window.switchTab = function(mode) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-btn')[mode==='daily'?0:1].classList.add('active');
+            fetchLeaderboard(mode);
+        };
+
+        function fetchLeaderboard(mode) {
+            const listDiv = document.getElementById('leaderboard-list'); listDiv.innerHTML = "<div style='text-align:center; color:#ff0055; padding-top:20px; animation:blink 1s infinite;'>LOADING...</div>";
+            if(currentLeaderboardListener) currentLeaderboardListener();
+            const collectionName = (mode === 'daily') ? `leaderboard_${KEY_ID}` : "leaderboard_firewall_alltime"; // Separate all-time for firewall
+            currentLeaderboardListener = db.collection(collectionName).orderBy("score", "desc").limit(10).onSnapshot((snap) => {
+                let html = ""; let rank = 1;
+                snap.forEach((doc) => {
+                    let d = doc.data(); let c="#aaa"; if(rank===1)c="#ffff00"; else if(rank===2)c="#00ffff";
+                    html += `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed #333; padding:5px;"><span style="color:${c}">#${rank} ${d.name.replace(/</g,"")}</span><span style="color:${c}">${d.score}</span></div>`; rank++;
+                });
+                listDiv.innerHTML = html || "<div style='text-align:center; color:#555;'>[ NO SCORES ]</div>";
+            });
+        }
+
+        function submitToCollection(col, name, score) {
+            return db.collection(col).where("name", "==", name).get().then(snap => {
+                if(!snap.empty) { if(score > snap.docs[0].data().score) return db.collection(col).doc(snap.docs[0].id).update({score, date:new Date()}); }
+                else return db.collection(col).add({name, score, date:new Date()});
+            });
+        }
+
+        window.submitScore = function(isAuto=false) {
+            const nameIn = document.getElementById('username-input'); const btn = document.getElementById('submit-score-btn');
+            let name = nameIn.value.toUpperCase().substring(0,15).trim() || "ANONYMOUS";
+            localStorage.setItem('powa-username', name); btn.disabled=true; btn.innerText="SENDING...";
+            Promise.all([ submitToCollection("leaderboard_firewall_alltime", name, score), submitToCollection(`leaderboard_${KEY_ID}`, name, score) ])
+            .then(()=>{ btn.innerText="SENT!"; }).catch(()=>{ btn.innerText="ERROR"; btn.disabled=false; });
+        };
+
+        initGalaxy(); resetLevel(); requestAnimationFrame(loop); switchTab('daily');
+    </script>
+</body>
+</html>
